@@ -80,13 +80,15 @@ Object.assign(Controller.prototype, {
 
         const viewModel = new ViewModel(_model);
 
-        _view = this._view = new View(_api, viewModel);
-        _view.on('all', (type, event) => {
-            if (event && event.doNotForward) {
-                return;
-            }
-            _trigger(type, event);
-        }, _this);
+        if (!__HEADLESS__) {
+            _view = this._view = new View(_api, viewModel);
+            _view.on('all', (type, event) => {
+                if (event && event.doNotForward) {
+                    return;
+                }
+                _trigger(type, event);
+            }, _this);
+        }
 
         const _programController = this._programController = new ProgramController(_model, mediaPool);
         updateProgramSoundSettings();
@@ -209,18 +211,21 @@ Object.assign(Controller.prototype, {
         });
 
         this.playerReady = function() {
+            if (__HEADLESS__) {
+                playerReadyNotify();
+            } else {
+                // Fire 'ready' once the view has resized so that player width and height are available
+                // (requires the container to be in the DOM)
+                _view.once(RESIZE, () => {
+                    try {
+                        playerReadyNotify();
+                    } catch (error) {
+                        _this.triggerError(convertToPlayerError(MSG_TECHNICAL_ERROR, ERROR_COMPLETING_SETUP, error));
+                    }
+                });
 
-            // Fire 'ready' once the view has resized so that player width and height are available
-            // (requires the container to be in the DOM)
-            _view.once(RESIZE, () => {
-                try {
-                    playerReadyNotify();
-                } catch (error) {
-                    _this.triggerError(convertToPlayerError(MSG_TECHNICAL_ERROR, ERROR_COMPLETING_SETUP, error));
-                }
-            });
-
-            _view.init();
+                _view.init();
+            }
         };
 
         function playerReadyNotify() {
@@ -993,9 +998,13 @@ Object.assign(Controller.prototype, {
         };
 
         // View passthroughs
-        this.resize = _view.resize;
-        this.getSafeRegion = _view.getSafeRegion;
-        this.setCaptions = _view.setCaptions;
+        if (__HEADLESS__) {
+            this.resize = this.getSafeRegion = this.setCaptions = function() {};
+        } else {
+            this.resize = _view.resize;
+            this.getSafeRegion = _view.getSafeRegion;
+            this.setCaptions = _view.setCaptions;
+        }
 
         this.checkBeforePlay = function() {
             return _beforePlay;
@@ -1097,7 +1106,9 @@ Object.assign(Controller.prototype, {
         // Add commands from CoreLoader to queue
         apiQueue.queue.push.apply(apiQueue.queue, commandQueue);
 
-        _view.setup();
+        if (_view) {
+            _view.setup();
+        }
     },
     get(property) {
         if (property in INITIAL_MEDIA_STATE) {

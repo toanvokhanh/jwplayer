@@ -108,9 +108,11 @@ const InstreamAdapter = function(_controller, _model, _view, _mediaPool) {
         _adProgram.model.set('state', STATE_BUFFERING);
 
         // don't trigger api play/pause on display click
-        const clickHandler = _view.clickHandler();
-        if (clickHandler) {
-            clickHandler.setAlternateClickHandlers(() => {}, null);
+        if (_view) {
+            const clickHandler = _view.clickHandler();
+            if (clickHandler) {
+                clickHandler.setAlternateClickHandlers(() => {}, null);
+            }
         }
 
         this.setText(_model.get('localization').loadingAd);
@@ -144,6 +146,9 @@ const InstreamAdapter = function(_controller, _model, _view, _mediaPool) {
     };
 
     function _addClickHandler(clickThroughUrl) {
+        if (!_view) {
+            return;
+        }
         // don't trigger api play/pause on display click
         const clickHandler = _view.clickHandler();
         if (clickHandler) {
@@ -393,7 +398,7 @@ const InstreamAdapter = function(_controller, _model, _view, _mediaPool) {
     };
 
     function _setDefaultClickHandler() {
-        if (_destroyed) {
+        if (_destroyed || !_view) {
             return;
         }
         // start listening for ad click
@@ -427,7 +432,7 @@ const InstreamAdapter = function(_controller, _model, _view, _mediaPool) {
 
     function _instreamMeta(evt) {
         // If we're getting video dimension metadata from the provider, allow the view to resize the media
-        if (evt.width && evt.height) {
+        if (evt.width && evt.height && _view) {
             _view.resizeMedia();
         }
     }
@@ -457,7 +462,7 @@ const InstreamAdapter = function(_controller, _model, _view, _mediaPool) {
         this.trigger('destroyed');
         this.off();
 
-        if (_view.clickHandler()) {
+        if (_view && _view.clickHandler()) {
             _view.clickHandler().revertAlternateClickHandlers();
         }
 
@@ -514,7 +519,7 @@ const InstreamAdapter = function(_controller, _model, _view, _mediaPool) {
      * @return {InstreamAdapter} - chainable
      */
     this.setText = function(text) {
-        if (_destroyed) {
+        if (_destroyed || !_view) {
             return this;
         }
         _view.setAltText(text || '');

@@ -13,6 +13,7 @@ const compileConstants = {
     __SELF_HOSTED__: true,
     __REPO__: `''`,
     __DEBUG__: true,
+    __HEADLESS__: false,
     __BUILD_VERSION__: `'${getBuildVersion()}'`,
     __FLASH_VERSION__: 18
 };
